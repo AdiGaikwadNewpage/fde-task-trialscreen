@@ -45,6 +45,9 @@ next-env.d.ts
 .wrangler/
 cloudflare-env.d.ts
 
+# Rendered video (large, and reproducible from the record-*.mjs scripts)
+deck/out/
+
 # Local scratch
 .scratch/
 .playwright-mcp/
