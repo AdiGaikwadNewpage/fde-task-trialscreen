@@ -31,6 +31,8 @@ node deck/record-deck.mjs && ./deck/build-video.sh
 ```
 
 **Use ElevenLabs.** The renderer already speaks to their API; it only needs a key.
+See `ELEVENLABS.md` for how to get one — it takes about two minutes and the free tier
+covers a full render.
 
 ```bash
 ELEVENLABS_API_KEY=sk_... node deck/make-voice.mjs

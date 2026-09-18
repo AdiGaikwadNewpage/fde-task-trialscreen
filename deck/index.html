@@ -59,6 +59,24 @@ h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
 .is-active [data-rise]{animation:rise .62s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:var(--d,0ms)}
 @keyframes rise{to{opacity:1;transform:none}}
 
+/* Staged mode (?staged=1, used when recording): nothing arrives until it is
+   called for, so points land as the narration reaches them rather than all
+   inside the first second of a forty-second slide. */
+body.staged .is-active [data-rise]{animation:none;opacity:0;transform:translateY(14px)}
+body.staged .is-active [data-rise].shown{animation:rise .62s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:0ms}
+
+/* The animations inside a card are keyed to slide entry, which in staged mode
+   would finish long before the card itself arrives. Re-key them to the reveal
+   so the ticks, the stamp and the connectors play when you actually see them. */
+body.staged .is-active .crit{animation:none;opacity:.18}
+body.staged .is-active .crit i{animation:none}
+body.staged .is-active [data-rise].shown .crit{animation:lightup .35s ease-out forwards;animation-delay:calc(260ms + var(--i) * 230ms)}
+body.staged .is-active [data-rise].shown .crit i{animation:tick .3s ease-out forwards;animation-delay:calc(440ms + var(--i) * 230ms)}
+body.staged .is-active .stamp{animation:none;opacity:0}
+body.staged .is-active [data-rise].shown .stamp{animation:stampin .45s cubic-bezier(.2,1.5,.4,1) forwards;animation-delay:700ms}
+body.staged .is-active .link path{animation:none;stroke-dashoffset:40}
+body.staged .is-active [data-rise].shown .link path{animation:draw .5s ease-out forwards;animation-delay:var(--d,0ms)}
+
 /* ---- slide 2: the manual ledger -------------------------------------- */
 .chart{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:22px 24px;width:430px}
 .chart-top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
@@ -177,26 +195,26 @@ h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
   <!-- 2 ---------------------------------------------------------------- -->
   <section class="slide">
     <div class="head">
-      <h2 data-rise>Recruitment is where trials stall.</h2>
+      <h2 data-rise data-order="1">Recruitment is where trials stall.</h2>
     </div>
     <div class="body" style="display:flex;gap:56px;align-items:flex-start">
       <div style="flex:1">
-        <p class="lede" data-rise style="--d:120ms;margin-top:0">
+        <p class="lede" data-rise data-order="3" style="--d:120ms;margin-top:0">
           A single protocol carries 20 to 50 eligibility criteria. Today a coordinator opens
           one chart at a time and checks it against every one of them, by hand.
         </p>
-        <p class="lede" data-rise style="--d:240ms">
+        <p class="lede" data-rise data-order="4" style="--d:240ms">
           Most trials miss their enrolment timeline, and recruitment is the largest single
           reason why. Every week of delay is a week the drug is not reaching anyone.
         </p>
         <!-- Drop a figure your team has verified into the line above if you have one.
              I have deliberately not invented a number here. -->
-        <div data-rise style="--d:380ms;margin-top:28px">
+        <div data-rise data-order="5" style="--d:380ms;margin-top:28px">
           <div class="clock"><span id="weeks">1</span> weeks<small>to screen a single site's cohort</small></div>
         </div>
       </div>
 
-      <div class="chart" data-rise style="--d:180ms">
+      <div class="chart" data-rise data-order="2" style="--d:180ms">
         <div class="chart-top">
           <span class="mono" style="font-size:12px;color:var(--faint)">TS-0142</span>
           <span class="tiny">checked by hand</span>
@@ -479,6 +497,7 @@ h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
     // The week counter is the point of slide 2: the cost is time, not effort.
     const el = document.getElementById('weeks');
     if (!el || !slides[i].contains(el)) return;
+    if (document.body.classList.contains("staged") && !el.closest("[data-rise]")?.classList.contains("shown")) return;
     clearInterval(weekTimer);
     let w = 1;
     el.textContent = w;
@@ -516,6 +535,32 @@ h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
 
   // Click the right two-thirds to advance, the left third to go back.
   stage.addEventListener('click', e => show(e.clientX < innerWidth / 3 ? i - 1 : i + 1));
+
+  // Staged mode is driven from outside (the recorder) so reveals can be spaced
+  // across a slide instead of firing together on entry.
+  const staged = new URLSearchParams(location.search).has("staged");
+  if (staged) document.body.classList.add("staged");
+
+  // Reveal order follows the DOM unless data-order says otherwise — the chart
+  // on slide 2 sits in the right-hand column but is spoken about early.
+  const ordered = () =>
+    [...slides[i].querySelectorAll("[data-rise]")].sort(
+      (a, b) => (+a.dataset.order || 99) - (+b.dataset.order || 99),
+    );
+  const pending = () => ordered().filter((e) => !e.classList.contains("shown"));
+  window.deckCount = () => slides[i].querySelectorAll("[data-rise]").length;
+  window.deckNext = () => {
+    const [next] = pending();
+    if (next) {
+      next.classList.add("shown");
+      // The week counter is the point of slide 2; start it when it appears.
+      if (next.querySelector("#weeks")) runCounter();
+    }
+    return pending().length;
+  };
+  window.deckRevealAll = () =>
+    slides[i].querySelectorAll("[data-rise]").forEach((e) => e.classList.add("shown"));
+  window.deckGo = (n) => show(n - 1);
 
   const start = parseInt(location.hash.slice(1), 10);
   show(Number.isInteger(start) && start > 0 ? start - 1 : 0);

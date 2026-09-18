@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
 const OUT = new URL("out/", import.meta.url).pathname;
-const DECK = new URL("index.html", import.meta.url).href;
+const DECK = new URL("index.html?staged=1", import.meta.url).href;
 const W = 1600, H = 900;
 
 /**
@@ -66,15 +66,33 @@ async function segment(name, beats) {
   await wait(600);
 
   for (const { slide, hold } of beats) {
-    await page.keyboard.press(String(slide));
-    console.log(`  slide ${slide} · ${hold.toFixed(1)}s`);
-    await wait(hold * 1000);
+    await page.evaluate((n) => window.deckGo(n), slide);
+    const points = await page.evaluate(() => window.deckCount());
+    console.log(`  slide ${slide} · ${hold.toFixed(1)}s · ${points} reveals`);
+
+    // Spread the reveals across the slide so each point arrives roughly as the
+    // narration reaches it, rather than all inside the first second.
+    // The first lands immediately; the rest fill the first three quarters of
+    // the hold, leaving the slide whole while the line finishes.
+    const span = hold * 1000 * 0.72;
+    const gap = points > 1 ? span / (points - 1) : 0;
+
+    await page.evaluate(() => window.deckNext());
+    let elapsed = 0;
+    for (let n = 1; n < points; n++) {
+      await wait(gap);
+      elapsed += gap;
+      await page.evaluate(() => window.deckNext());
+    }
+    await wait(Math.max(0, hold * 1000 - elapsed));
   }
 
   await context.close();
   await browser.close();
 
-  const webm = readdirSync(OUT).find((f) => f.endsWith(".webm") && !f.startsWith("deck-") && !f.startsWith("demo"));
+  const webm = readdirSync(OUT).find(
+    (f) => f.endsWith(".webm") && !f.startsWith("deck-") && !f.startsWith("demo"),
+  );
   if (!webm) throw new Error("no video produced for " + name);
   const src = join(OUT, `${name}.webm`);
   renameSync(join(OUT, webm), src);

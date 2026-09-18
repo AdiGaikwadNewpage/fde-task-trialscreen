@@ -14,6 +14,7 @@ import { chromium } from "playwright";
 import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import { CURSOR_SCRIPT } from "./cursor.mjs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = new URL("out/", import.meta.url).pathname;
@@ -63,8 +64,10 @@ async function click(page, locator) {
 }
 
 async function main() {
-  rmSync(OUT, { recursive: true, force: true });
+  // Only clear this script's own output. Wiping the whole directory would take
+  // the rendered narration and the deck segments with it.
   mkdirSync(OUT, { recursive: true });
+  for (const f of ["demo.webm", "demo.mp4"]) rmSync(join(OUT, f), { force: true });
 
   const browser = await chromium.launch();
   const context = await browser.newContext({
@@ -74,6 +77,10 @@ async function main() {
     reducedMotion: "no-preference",
   });
   const page = await context.newPage();
+
+  // Playwright's screencast does not draw the pointer, so the demo would show
+  // things happening with nothing visibly causing them.
+  await page.addInitScript(CURSOR_SCRIPT);
 
   // The dev-server badge sits in the bottom-left corner of every frame.
   await page.addStyleTag({ content: "nextjs-portal{display:none!important}" }).catch(() => {});
