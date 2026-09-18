@@ -1,22 +1,57 @@
 # Making the video
 
-Three commands produce a complete 7:17 silent cut. You record one voice track over it.
+Four commands produce the finished, narrated video.
 
 ```bash
-npm run dev                      # in the project root, leave it running
-node deck/record-deck.mjs        # slides 1-6 and 7-9, held to the script timings
-node deck/record-demo.mjs        # the live app, driven and captured automatically
-./deck/build-video.sh            # joins them → deck/out/silent-cut.mp4
+npm run dev                   # in the project root, leave it running
+node deck/make-voice.mjs      # renders the narration → deck/out/voice/
+node deck/record-deck.mjs     # slides, each held for exactly as long as its line
+node deck/record-demo.mjs     # drives the live app and records it
+./deck/build-video.sh         # → deck/out/trialscreen-pitch.mp4
 ```
 
-Then record your narration against `silent-cut.mp4` — play it back and read `SCRIPT.md`
-over the top — and assemble:
+The picture is cut to the voice, not the other way round: `record-deck.mjs` reads the
+measured length of each spoken line and holds that slide for precisely that long, and
+`build-video.sh` freezes the last frame of any segment whose narration runs slightly
+longer. Output is **6:36, 1600×900, H.264/AAC, −14 LUFS**.
+
+## Choosing the voice
+
+The default is the macOS built-in voice, which is clear but audibly synthetic. Two ways to
+improve it, in order of effort:
+
+**Download a Premium macOS voice — free, two minutes, a big step up.**
+System Settings → Accessibility → Spoken Content → System Voice → Manage Voices. Download
+one of the *(Premium)* or *(Enhanced)* English voices — Ava, Zoe, Evan and Serena are the
+strongest — then:
 
 ```bash
-./deck/build-video.sh ~/Desktop/voice.m4a   # → deck/out/trialscreen-pitch.mp4
+VOICE="Ava (Premium)" RATE=140 node deck/make-voice.mjs
+node deck/record-deck.mjs && ./deck/build-video.sh
 ```
 
-The audio is normalised to −16 LUFS, which is what every platform expects for speech.
+**Use ElevenLabs.** The renderer already speaks to their API; it only needs a key.
+
+```bash
+ELEVENLABS_API_KEY=sk_... node deck/make-voice.mjs
+node deck/record-deck.mjs && ./deck/build-video.sh
+```
+
+`EL_VOICE_ID` picks the voice (the default is Adam, a level, low read). About 6,000
+characters of narration, which is inside the free tier.
+
+**Or narrate it yourself** — play `deck/out/silent-cut.mp4` and read `SCRIPT.md` over it:
+
+```bash
+./deck/build-video.sh ~/Desktop/voice.m4a
+```
+
+## Pace and clarity
+
+`RATE` is words per minute for the macOS voice. 140 is deliberate and clear; drop to 130 if
+it still feels quick. The audio chain is a high-pass at 85 Hz to clear rumble, gentle
+compression so quiet phrases stay audible, then normalisation to −14 LUFS — slightly hotter
+than the −16 streaming standard, so it plays loud in a meeting room.
 
 ## What each piece runs to
 

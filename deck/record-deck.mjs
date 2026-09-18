@@ -8,7 +8,7 @@
  *         deck/out/deck-outro.mp4  (slides 7-9, after it)
  */
 import { chromium } from "playwright";
-import { mkdirSync, readdirSync, renameSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
@@ -16,20 +16,34 @@ const OUT = new URL("out/", import.meta.url).pathname;
 const DECK = new URL("index.html", import.meta.url).href;
 const W = 1600, H = 900;
 
-/** Seconds per slide, taken from the timings in SCRIPT.md. */
-const INTRO = [
-  { slide: 1, hold: 12 },
-  { slide: 2, hold: 50 },
-  { slide: 3, hold: 33 },
-  { slide: 4, hold: 37 },
-  { slide: 5, hold: 43 },
-  { slide: 6, hold: 7 },
-];
-const OUTRO = [
-  { slide: 7, hold: 45 },
-  { slide: 8, hold: 35 },
-  { slide: 9, hold: 23 },   // 20s of narration plus a 3s hold before you cut
-];
+/**
+ * Slide holds, in seconds.
+ *
+ * If the narration has been rendered (node deck/make-voice.mjs) each slide is
+ * held for exactly as long as its line takes to say, so the picture is cut to
+ * the voice. Otherwise these fall back to the timings written in SCRIPT.md.
+ */
+function holds() {
+  try {
+    const t = JSON.parse(readFileSync(new URL("out/voice/timing.json", import.meta.url), "utf8"));
+    const map = (beats) => beats.map((b) => ({ slide: b.slide, hold: b.seconds }));
+    console.log("holds: cut to the rendered narration\n");
+    // The final slide keeps three seconds of air after the last word.
+    const outro = map(t.outro);
+    outro[outro.length - 1].hold += 3;
+    return { INTRO: map(t.intro), OUTRO: outro };
+  } catch {
+    console.log("holds: from SCRIPT.md (no narration rendered yet)\n");
+    return {
+      INTRO: [
+        { slide: 1, hold: 12 }, { slide: 2, hold: 50 }, { slide: 3, hold: 33 },
+        { slide: 4, hold: 37 }, { slide: 5, hold: 43 }, { slide: 6, hold: 7 },
+      ],
+      OUTRO: [{ slide: 7, hold: 45 }, { slide: 8, hold: 35 }, { slide: 9, hold: 23 }],
+    };
+  }
+}
+const { INTRO, OUTRO } = holds();
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -41,15 +55,19 @@ async function segment(name, beats) {
     deviceScaleFactor: 1,
   });
   const page = await context.newPage();
-  await page.goto(DECK);
-  await page.evaluate(() => document.fonts.ready);
+  // Not "load": the Google Fonts stylesheet can hang, and the deck is perfectly
+  // usable before it resolves. Give the webfont a moment, then carry on.
+  await page.goto(DECK, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() =>
+    Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 4000))]),
+  );
   // Hide the progress bar and slide counter — presenter chrome, not video.
   await page.keyboard.press("h");
   await wait(600);
 
   for (const { slide, hold } of beats) {
     await page.keyboard.press(String(slide));
-    console.log(`  slide ${slide} · ${hold}s`);
+    console.log(`  slide ${slide} · ${hold.toFixed(1)}s`);
     await wait(hold * 1000);
   }
 
