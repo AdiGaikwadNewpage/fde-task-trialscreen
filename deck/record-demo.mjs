@@ -11,7 +11,7 @@
  * Output: deck/out/demo.webm (and demo.mp4 if ffmpeg is on PATH).
  */
 import { chromium } from "playwright";
-import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { CURSOR_SCRIPT } from "./cursor.mjs";
@@ -198,13 +198,16 @@ async function main() {
   await page.goto(`${BASE}/audit`);
   await wait(BEAT.hold + BEAT.read);
 
+  // Ask Playwright for the exact file it wrote. Scanning the directory for
+  // "any .webm" once renamed a deck recording to demo.mp4, which put slides in
+  // the middle of the finished video.
+  const video = page.video();
   await context.close();
   await browser.close();
 
-  // Playwright names the file by session id; give it a predictable name.
-  const webm = readdirSync(OUT).find((f) => f.endsWith(".webm"));
-  if (!webm) throw new Error("no video was produced");
-  renameSync(join(OUT, webm), join(OUT, "demo.webm"));
+  const src = await video?.path();
+  if (!src) throw new Error("no video was produced");
+  renameSync(src, join(OUT, "demo.webm"));
   console.log(`\n  video: deck/out/demo.webm`);
 
   try {

@@ -80,3 +80,12 @@ ffmpeg -v error -y -i picture.mp4 -i "$VOICE" \
 
 rm -f v.txt a.txt a-*.txt fit-*.mp4 picture.mp4
 echo "final → deck/out/trialscreen-pitch.mp4  ($(dur trialscreen-pitch.mp4 | cut -d. -f1)s)"
+
+# Publish a new numbered version rather than overwriting what is already there,
+# so an earlier cut is never lost to a re-render.
+PUB="../../demo_video"
+mkdir -p "$PUB"
+N=1
+while [ -e "$PUB/trialscreen-demo-updated-$N.mp4" ]; do N=$((N + 1)); done
+cp trialscreen-pitch.mp4 "$PUB/trialscreen-demo-updated-$N.mp4"
+echo "published → demo_video/trialscreen-demo-updated-$N.mp4"

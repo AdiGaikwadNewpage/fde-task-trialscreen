@@ -8,7 +8,7 @@
  *         deck/out/deck-outro.mp4  (slides 7-9, after it)
  */
 import { chromium } from "playwright";
-import { mkdirSync, readdirSync, readFileSync, renameSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
@@ -87,15 +87,16 @@ async function segment(name, beats) {
     await wait(Math.max(0, hold * 1000 - elapsed));
   }
 
+  // Ask Playwright for the exact file it wrote rather than scanning for a
+  // stray .webm — guessing is how a deck take once ended up as the demo.
+  const video = page.video();
   await context.close();
   await browser.close();
 
-  const webm = readdirSync(OUT).find(
-    (f) => f.endsWith(".webm") && !f.startsWith("deck-") && !f.startsWith("demo"),
-  );
-  if (!webm) throw new Error("no video produced for " + name);
+  const written = await video?.path();
+  if (!written) throw new Error("no video produced for " + name);
   const src = join(OUT, `${name}.webm`);
-  renameSync(join(OUT, webm), src);
+  renameSync(written, src);
 
   try {
     execFileSync("ffmpeg", [
