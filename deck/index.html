@@ -38,7 +38,9 @@ body{
 .slide.is-active{display:flex}
 
 /* ---- persistent chrome ---------------------------------------------- */
-#logo{position:absolute;top:40px;left:84px;height:26px;width:auto;z-index:20;opacity:.95}
+#logo{position:absolute;top:38px;left:84px;z-index:20;display:flex;align-items:center;gap:10px}
+#logo svg{height:28px;width:28px;flex:none}
+#logo span{font-size:16px;font-weight:600;letter-spacing:-.02em}
 #chrome{position:absolute;left:0;right:0;bottom:0;z-index:20;transition:opacity .2s}
 body.clean #chrome{opacity:0;pointer-events:none}
 #bar{height:2px;background:var(--line)}
@@ -175,13 +177,25 @@ body.staged .is-active [data-rise].shown .link path{animation:draw .5s ease-out 
 </head>
 <body>
 <div id="stage">
-  <img id="logo" src="newpage-logo.png" alt="NewPage">
+  <div id="logo">
+    <!-- The product's mark: a criterion ledger seen end-on. Three rows, each
+         carrying its verdict colour, the bars falling away down the stack. -->
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+      <rect width="24" height="24" rx="6.5" fill="var(--paper)"/>
+      <rect x="4.7" y="5.7" width="2.6" height="2.6" rx="1.3" fill="#2E6B4F"/>
+      <rect x="9.3" y="6.25" width="10" height="1.5" rx=".75" fill="var(--ink)" opacity=".45"/>
+      <rect x="4.7" y="10.7" width="2.6" height="2.6" rx="1.3" fill="#8A5D0F"/>
+      <rect x="9.3" y="11.25" width="7.4" height="1.5" rx=".75" fill="var(--ink)" opacity=".45"/>
+      <rect x="4.7" y="15.7" width="2.6" height="2.6" rx="1.3" fill="#9E2B2B"/>
+      <rect x="9.3" y="16.25" width="4.8" height="1.5" rx=".75" fill="var(--ink)" opacity=".45"/>
+    </svg>
+    <span>TrialScreen</span>
+  </div>
 
   <!-- 1 ---------------------------------------------------------------- -->
   <section class="slide">
     <div class="body">
-      <p class="mono" data-rise style="--d:0ms;font-size:13px;color:var(--accent);letter-spacing:.04em">TrialScreen</p>
-      <h1 data-rise style="--d:90ms;margin-top:20px">Eligibility screening that shows its working.</h1>
+      <h1 data-rise style="--d:0ms">Eligibility screening that shows its working.</h1>
       <p class="lede" data-rise style="--d:220ms">
         A working prototype for clinical trial patient recruitment — and for the reason
         every previous attempt stalled.

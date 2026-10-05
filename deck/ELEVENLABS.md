@@ -18,7 +18,6 @@ Direct link once you are signed in: **elevenlabs.io/app/settings/api-keys**
 ## 3. Use it
 
 ```bash
-cd /Users/newpage/Documents/FDE_TASK_NEW_PROBLEM
 export ELEVENLABS_API_KEY=sk_...
 
 node deck/make-voice.mjs        # renders the narration with ElevenLabs
